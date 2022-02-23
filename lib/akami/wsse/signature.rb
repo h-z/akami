@@ -28,7 +28,6 @@ module Akami
 
       ExclusiveXMLCanonicalizationAlgorithm = 'http://www.w3.org/2001/10/xml-exc-c14n#'.freeze
       RSASHA1SignatureAlgorithm = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'.freeze
-      SHA1DigestAlgorithm = 'http://www.w3.org/2000/09/xmldsig#sha1'.freeze
 
       X509v3ValueType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3'.freeze
       Base64EncodingType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'.freeze
@@ -40,6 +39,7 @@ module Akami
         @timestamp  = options[:timestamp] ? options[:timestamp] : false
         @created_at = options[:created_at]
         @expires_at = options[:expires_at]
+        @digest_algorithm = options[:digest_algorithm] || :sha1
       end
 
       def have_document?
@@ -120,6 +120,20 @@ module Akami
 
       private
 
+      def digester
+        @digester ||= OpenSSL::Digest.const_get(@digest_algorithm.to_s.upcase).new
+      end
+
+      def digest_algorithm_uri
+        {
+          sha1: "http://www.w3.org/2000/09/xmldsig#sha1",
+          sha224: "http://www.w3.org/2001/04/xmldsig-more#sha224",
+          sha256: "http://www.w3.org/2001/04/xmlenc#sha256",
+          sha384: "http://www.w3.org/2001/04/xmldsig-more#sha384",
+          sha512: "http://www.w3.org/2001/04/xmlenc#sha512"
+        }[@digest_algorithm]
+      end
+
       def binary_security_token
         {
           "wsse:BinarySecurityToken" => Base64.encode64(certs.cert.to_der).gsub("\n", ''),
@@ -191,17 +205,17 @@ module Akami
 
       def body_digest
         body = canonicalize(at_xpath(@document, "//Envelope/Body"))
-        Base64.encode64(OpenSSL::Digest::SHA1.digest(body)).strip
+        Base64.encode64(digester.digest(body)).strip
       end
 
       def timestamp_digest
         return nil unless timestamp
         timestamp = canonicalize(at_xpath(@document, "//Envelope/Header/Security/Timestamp"))
-        Base64.encode64(OpenSSL::Digest::SHA1.digest(timestamp)).strip if timestamp
+        Base64.encode64(digester.digest(timestamp)).strip if timestamp
       end
 
       def signed_info_digest_method
-        { "DigestMethod/" => nil, :attributes! => { "DigestMethod/" => { "Algorithm" => SHA1DigestAlgorithm } } }
+        { "DigestMethod/" => nil, :attributes! => { "DigestMethod/" => { "Algorithm" => digest_algorithm_uri } } }
       end
 
       def signed_info_transforms
