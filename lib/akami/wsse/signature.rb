@@ -27,7 +27,6 @@ module Akami
       end
 
       ExclusiveXMLCanonicalizationAlgorithm = 'http://www.w3.org/2001/10/xml-exc-c14n#'.freeze
-      RSASHA1SignatureAlgorithm = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'.freeze
 
       X509v3ValueType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3'.freeze
       Base64EncodingType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'.freeze
@@ -40,6 +39,7 @@ module Akami
         @created_at = options[:created_at]
         @expires_at = options[:expires_at]
         @digest_algorithm = options[:digest_algorithm] || :sha1
+        @signature_algorithm = options[:signature_algorithm] || :sha1
       end
 
       def have_document?
@@ -134,6 +134,20 @@ module Akami
         }[@digest_algorithm]
       end
 
+      def signer
+        @signer ||= OpenSSL::Digest.const_get(@signature_algorithm.to_s.upcase).new
+      end
+
+      def signature_algorithm_uri
+        {
+          sha1: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+          sha224: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224",
+          sha256: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+          sha384: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+          sha512: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
+        }[@signature_algorithm]
+      end
+
       def binary_security_token
         {
           "wsse:BinarySecurityToken" => Base64.encode64(certs.cert.to_der).gsub("\n", ''),
@@ -175,7 +189,7 @@ module Akami
             "Reference" => references,
             :attributes! => {
                 "CanonicalizationMethod/" => { "Algorithm" => ExclusiveXMLCanonicalizationAlgorithm },
-                "SignatureMethod/" => { "Algorithm" => RSASHA1SignatureAlgorithm },
+                "SignatureMethod/" => { "Algorithm" => signature_algorithm_uri },
                 "Reference" => { "URI" => reference_uris },
             },
             :order! => [ "CanonicalizationMethod/", "SignatureMethod/", "Reference" ],
@@ -199,7 +213,7 @@ module Akami
         raise MissingCertificate, "Expected a private_key for signing" unless certs.private_key
         signed_info = at_xpath(@document, "//Envelope/Header/Security/Signature/SignedInfo")
         signed_info = signed_info ? canonicalize(signed_info) : ""
-        signature = certs.private_key.sign(OpenSSL::Digest::SHA1.new, signed_info)
+        signature = certs.private_key.sign(signer, signed_info)
         Base64.encode64(signature).gsub("\n", '') # TODO: DRY calls to Base64.encode64(...).gsub("\n", '')
       end
 
