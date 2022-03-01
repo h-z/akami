@@ -33,7 +33,7 @@ describe Akami::WSSE::Signature do
       signature.document = xml
       expect(signature.to_token[:attributes!]['wsse:BinarySecurityToken']['xmlns:wsu']).
         to equal(Akami::WSSE::WSU_NAMESPACE)
-      expect(signature.to_token[:attributes!]['Signature']['xmlns']).
+      expect(signature.to_token[:attributes!]['ds:Signature']['xmlns:ds']).
         to equal(Akami::WSSE::Signature::SignatureNamespace)
     end
   end

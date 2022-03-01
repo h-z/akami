@@ -109,8 +109,7 @@ describe Akami do
       before { wsse.credentials "username", "password" }
 
       it "contains a wsse:Security tag" do
-        namespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        expect(wsse.to_xml).to include("<wsse:Security xmlns:wsse=\"#{namespace}\">")
+        expect(wsse.to_xml).to include('<wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"')
       end
 
       it "contains a wsu:Id attribute" do
@@ -197,8 +196,7 @@ describe Akami do
       before { wsse.timestamp = true }
 
       it "contains a wsse:Timestamp node" do
-        expect(wsse.to_xml).to include('<wsu:Timestamp wsu:Id="Timestamp-1" ' +
-          'xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">')
+        expect(wsse.to_xml).to include('<wsu:Timestamp wsu:Id="TS-1">')
       end
 
       it "contains a wsu:Created node defaulting to Time.now" do
