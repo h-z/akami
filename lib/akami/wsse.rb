@@ -109,6 +109,7 @@ module Akami
         unless xml['wsse:Security'][:order!].nil?
           xml['wsse:Security'][:order!] << 'wsu:Timestamp'
         end
+        xml['wsse:Security'][:attributes!]['wsu:Timestamp'] = { 'wsu:Id' => 'TS-1' }
       end
 
       Gyoku.xml xml

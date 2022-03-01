@@ -125,17 +125,35 @@ module Akami
           "ds:SignedInfo" => {
             "ds:CanonicalizationMethod/" => nil,
             "ds:SignatureMethod/" => nil,
-            "ds:Reference" => [
-              signed_info_transforms.merge(signed_info_digest_method).merge({ "ds:DigestValue" => body_digest }),
-            ],
+            "ds:Reference" => references,
             :attributes! => {
               "ds:CanonicalizationMethod/" => { "Algorithm" => ExclusiveXMLCanonicalizationAlgorithm },
               "ds:SignatureMethod/" => { "Algorithm" => RSASHA1SignatureAlgorithm },
-              "ds:Reference" => { "URI" => ["##{body_id}"] },
+              "ds:Reference" => { "URI" => reference_uris },
             },
             :order! => [ "ds:CanonicalizationMethod/", "ds:SignatureMethod/", "ds:Reference" ],
           },
         }
+      end
+
+      def references
+        refs = [
+          signed_info_transforms
+            .merge(signed_info_digest_method)
+            .merge({ "ds:DigestValue" => body_digest })
+        ]
+        if timestamp
+          refs << signed_info_transforms
+                    .merge(signed_info_digest_method)
+                    .merge({ "ds:DigestValue" => timestamp_digest })
+        end
+        refs
+      end
+
+      def reference_uris
+        ref_uris = ["##{body_id}"]
+        ref_uris << "##{timestamp_id}" if timestamp
+        ref_uris
       end
 
       def the_signature
@@ -149,6 +167,18 @@ module Akami
       def body_digest
         body = canonicalize(at_xpath(@document, "//Envelope/Body"))
         Base64.encode64(OpenSSL::Digest::SHA1.digest(body)).strip
+      end
+
+      def timestamp_id
+        @timestamp_id ||= "TS-1".freeze
+      end
+
+      def timestamp_digest
+        Base64.encode64(OpenSSL::Digest::SHA1.digest(timestamp)).strip if timestamp
+      end
+
+      def timestamp
+        @timestamp ||= canonicalize(at_xpath(@document, "//Envelope/Header/Security/Timestamp"))
       end
 
       def signed_info_digest_method
