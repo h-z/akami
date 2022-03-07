@@ -1,11 +1,13 @@
 require "akami/hash_helper"
 require "akami/wsse/certs"
+require "akami/algorithm_helper"
 
 module Akami
   class WSSE
     class Signature
       include Akami::XPathHelper
       include Akami::C14nHelper
+      include Akami::AlgorithmHelper
 
       class MissingCertificate < RuntimeError; end
 
@@ -25,15 +27,15 @@ module Akami
 
       ExclusiveXMLCanonicalizationAlgorithm = 'http://www.w3.org/2001/10/xml-exc-c14n#'.freeze
       RSASHA1SignatureAlgorithm = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'.freeze
-      SHA1DigestAlgorithm = 'http://www.w3.org/2000/09/xmldsig#sha1'.freeze
 
       X509v3ValueType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3'.freeze
       Base64EncodingType = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'.freeze
 
       SignatureNamespace = 'http://www.w3.org/2000/09/xmldsig#'.freeze
 
-      def initialize(certs = Certs.new)
+      def initialize(certs = Certs.new, options = {})
         @certs = certs
+        @digest_algorithm = options[:digest_algorithm] || :sha1
       end
 
       def have_document?
@@ -166,7 +168,7 @@ module Akami
 
       def body_digest
         body = canonicalize(at_xpath(@document, "//Envelope/Body"))
-        Base64.encode64(OpenSSL::Digest::SHA1.digest(body)).strip
+        Base64.encode64(digester.digest(body)).strip
       end
 
       def timestamp_id
@@ -174,7 +176,7 @@ module Akami
       end
 
       def timestamp_digest
-        Base64.encode64(OpenSSL::Digest::SHA1.digest(timestamp)).strip if timestamp
+        Base64.encode64(digester.digest(timestamp)).strip if timestamp
       end
 
       def timestamp
@@ -182,7 +184,7 @@ module Akami
       end
 
       def signed_info_digest_method
-        { "ds:DigestMethod/" => nil, :attributes! => { "ds:DigestMethod/" => { "Algorithm" => SHA1DigestAlgorithm } } }
+        { "ds:DigestMethod/" => nil, :attributes! => { "ds:DigestMethod/" => { "Algorithm" => digest_algorithm_uri } } }
       end
 
       def signed_info_transforms
