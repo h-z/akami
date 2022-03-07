@@ -182,7 +182,7 @@ describe Akami do
         end
       end
 
-      it "has contains a properly hashed password" do
+      it "contains a properly hashed password" do
         xml_header = Nokogiri::XML(wsse.to_xml)
         xml_header.remove_namespaces!
         nonce = Base64.decode64(xml_header.xpath('//Nonce').first.content)

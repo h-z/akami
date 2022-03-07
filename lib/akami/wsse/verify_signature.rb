@@ -128,19 +128,6 @@ module Akami
           'http://www.w3.org/2000/09/xmldsig#sha1' => lambda { OpenSSL::Digest::SHA1.new },
           # SHA 256
           'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256' => lambda { OpenSSL::Digest::SHA256.new },
-          # GOST R 34.11-94
-          # You need correctly configured gost engine in your system OpenSSL, requires OpenSSL >= 1.0.0
-          # see https://github.com/openssl/openssl/blob/master/engines/ccgost/README.gost
-          'http://www.w3.org/2001/04/xmldsig-more#gostr3411' => lambda {
-            if defined? JRUBY_VERSION
-              OpenSSL::Digest.new('GOST3411')
-            else
-              OpenSSL::Engine.load
-              gost_engine = OpenSSL::Engine.by_id('gost')
-              gost_engine.set_default(0xFFFF)
-              gost_engine.digest('md_gost94')
-            end
-          },
       }
 
       # Returns instance of +OpenSSL::Digest+ class, initialized, reset, and ready to calculate new hashes.
