@@ -11,6 +11,7 @@ describe Akami::WSSE::Signature do
   let(:cert_path) { File.join(fixtures_path, 'cert.pem') }
   let(:password) { 'password' }
   let(:digest_algorithm) { nil }
+  let(:signature_algorithm) { nil }
 
   let(:signature) {
     Akami::WSSE::Signature.new(
@@ -19,7 +20,8 @@ describe Akami::WSSE::Signature do
         private_key_file:     cert_path,
         private_key_password: password
       ),
-      digest_algorithm: digest_algorithm
+      digest_algorithm: digest_algorithm,
+      signature_algorithm:signature_algorithm
     )
   }
 
@@ -50,6 +52,22 @@ describe Akami::WSSE::Signature do
       end
     end
 
+    {
+      sha1: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+      sha224: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224",
+      sha256: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+      sha384: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+      sha512: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
+    }.each do |algo, url|
+      context "when signing algorithm is #{algo}" do
+        let(:signature_algorithm) { algo }
+
+        it "should sign with correct algorithm" do
+          signature.document = xml
+          expect(signature.to_token['ds:Signature']['ds:SignedInfo'][:attributes!]['ds:SignatureMethod/']['Algorithm']).to eq(url)
+        end
+      end
+    end
 
     it 'should deep_merge with binary_security_token' do
       signature.document = xml

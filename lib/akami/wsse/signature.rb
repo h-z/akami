@@ -36,6 +36,7 @@ module Akami
       def initialize(certs = Certs.new, options = {})
         @certs = certs
         @digest_algorithm = options[:digest_algorithm] || :sha1
+        @signature_algorithm = options[:signature_algorithm] || :sha1
       end
 
       def have_document?
@@ -130,7 +131,7 @@ module Akami
             "ds:Reference" => references,
             :attributes! => {
               "ds:CanonicalizationMethod/" => { "Algorithm" => ExclusiveXMLCanonicalizationAlgorithm },
-              "ds:SignatureMethod/" => { "Algorithm" => RSASHA1SignatureAlgorithm },
+              "ds:SignatureMethod/" => { "Algorithm" => signature_algorithm_uri },
               "ds:Reference" => { "URI" => reference_uris },
             },
             :order! => [ "ds:CanonicalizationMethod/", "ds:SignatureMethod/", "ds:Reference" ],
@@ -162,7 +163,7 @@ module Akami
         raise MissingCertificate, "Expected a private_key for signing" unless certs.private_key
         signed_info = at_xpath(@document, "//Envelope/Header/Security/Signature/SignedInfo")
         signed_info = signed_info ? canonicalize(signed_info) : ""
-        signature = certs.private_key.sign(OpenSSL::Digest::SHA1.new, signed_info)
+        signature = certs.private_key.sign(signer, signed_info)
         Base64.encode64(signature).gsub("\n", '') # TODO: DRY calls to Base64.encode64(...).gsub("\n", '')
       end
 
