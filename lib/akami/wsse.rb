@@ -76,7 +76,11 @@ module Akami
 
     # Sets whether to generate a wsu:Timestamp header.
     def timestamp=(timestamp)
-      @wsu_timestamp = timestamp
+      @wsu_timestamp = !!timestamp
+      if timestamp.is_a?(Hash)
+        @created_at = timestamp[:created_at]
+        @expires_at = timestamp[:expires_at]
+      end
     end
 
     # Hook for Soap::XML that allows us to add attributes to the env:Body tag

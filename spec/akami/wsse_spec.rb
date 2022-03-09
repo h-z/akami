@@ -214,6 +214,19 @@ describe Akami do
       end
     end
 
+    context "with #timestamp holding created_at and expires_at" do
+      let(:timestamp) { { created_at: Time.now, expires_at: Time.now + 450 } }
+      before { wsse.timestamp = timestamp }
+
+      it "contains a wsu:Created node with the given time" do
+        expect(wsse.to_xml).to include("<wsu:Created>#{timestamp[:created_at].utc.xmlschema}</wsu:Created>")
+      end
+
+      it "contains a wsu:Expires node with given time" do
+        expect(wsse.to_xml).to include("<wsu:Expires>#{timestamp[:expires_at].utc.xmlschema}</wsu:Expires>")
+      end
+    end
+
     context "with #created_at" do
       before { wsse.created_at = Time.now + 86400 }
 
